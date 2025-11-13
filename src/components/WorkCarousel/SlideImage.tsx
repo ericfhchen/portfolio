@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { WorkSlide } from "@/lib/content";
 
@@ -18,6 +18,7 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
 
   const [currentVariant, setCurrentVariant] = useState(defaultVariant);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
@@ -29,10 +30,37 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
     if (imgRef.current?.complete && imgRef.current.naturalHeight !== 0) {
       // Image already loaded from cache
       setIsLoaded(true);
-    } else {
+    } else if (!isUpgrading) {
+      // Only reset if not upgrading - keep image visible during upgrade
       setIsLoaded(false);
     }
-  }, [currentVariant.src]);
+  }, [currentVariant.src, isUpgrading]);
+
+  // Function to determine the best variant for current viewport
+  // Uses viewport width thresholds instead of variant widths since Arena may not provide different widths for each variant
+  const getBestVariant = useCallback((deviceWidth: number) => {
+    const original = slide.variants.original;
+    const large = slide.variants.large;
+    const display = slide.variants.display;
+
+    // Mobile: use smaller variants
+    if (deviceWidth < 768) {
+      return display ?? large ?? original;
+    }
+
+    // Large desktop: use original quality
+    if (deviceWidth >= 1920 && original) {
+      return original;
+    }
+
+    // Desktop: use large variant
+    if (deviceWidth >= 1024 && large) {
+      return large;
+    }
+
+    // Small desktop/tablet: use display
+    return display ?? large ?? original;
+  }, [slide.variants]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -40,36 +68,21 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
     let cancelled = false;
     let timeoutId: NodeJS.Timeout | null = null;
 
-    const original = slide.variants.original;
-    const large = slide.variants.large;
-    const display = slide.variants.display;
-    // Use physical screen width only, not multiplied by devicePixelRatio
-    // This ensures mobile devices load appropriately-sized images
     const deviceWidth = window.innerWidth;
+    const bestVariant = getBestVariant(deviceWidth);
 
-    // For mobile devices (< 768px), prefer display or large variants over original
-    const isMobile = deviceWidth < 768;
-
-    if (isMobile) {
-      // On mobile, use display or large variant instead of original
-      const mobileVariant = display ?? large ?? original;
-      if (currentVariant !== mobileVariant) {
-        setCurrentVariant(mobileVariant);
-      }
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    // Desktop logic: progressively load higher quality based on screen width
-    if (original && deviceWidth >= (original.width ?? slide.width)) {
-      if (currentVariant !== original) {
+    // Compare by src, not by reference
+    if (currentVariant.src !== bestVariant.src) {
+      const original = slide.variants.original;
+      
+      // If upgrading to original, preload it first
+      if (bestVariant.src === original.src) {
         const img = new window.Image();
         img.src = original.src;
         
         // Add timeout to fallback to smaller variant if loading takes too long
         timeoutId = setTimeout(() => {
-          if (!cancelled && currentVariant !== original) {
+          if (!cancelled && currentVariant.src !== original.src) {
             console.warn(`Image loading timeout for ${original.src}, keeping current variant`);
           }
         }, 10000);
@@ -88,26 +101,75 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
             // Keep current variant on error
           }
         };
-        
-        return () => {
-          cancelled = true;
-          if (timeoutId) clearTimeout(timeoutId);
-        };
+      } else {
+        // For other variants, switch immediately
+        setCurrentVariant(bestVariant);
       }
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (large && deviceWidth >= (large.width ?? slide.width) && currentVariant !== large) {
-      setCurrentVariant(large);
     }
 
     return () => {
       cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [currentVariant, isActive, slide]);
+  }, [currentVariant, isActive, slide, getBestVariant]);
+
+  // Listen for window resize and upgrade variants when appropriate
+  useEffect(() => {
+    let resizeTimer: NodeJS.Timeout;
+
+    const handleResize = () => {
+      // Shorter debounce to feel more responsive
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const deviceWidth = window.innerWidth;
+        const bestVariant = getBestVariant(deviceWidth);
+        
+        // Only upgrade to higher resolution variants, never downgrade
+        // This prevents unnecessary downloads when shrinking the window
+        // Compare by src, not by reference
+        if (bestVariant.src !== currentVariant.src) {
+          // Establish priority: original > large > display
+          const getVariantPriority = (src: string): number => {
+            if (src.includes('variant=original')) return 3;
+            if (src.includes('variant=large')) return 2;
+            if (src.includes('variant=display')) return 1;
+            return 0;
+          };
+          
+          const currentPriority = getVariantPriority(currentVariant.src);
+          const bestPriority = getVariantPriority(bestVariant.src);
+          
+          // Only switch if the new variant is higher priority (higher resolution)
+          if (bestPriority > currentPriority) {
+            // Apply blur immediately
+            setIsUpgrading(true);
+            
+            // Preload the higher res image into browser cache
+            const img = new window.Image();
+            img.src = bestVariant.src;
+            
+            img.onload = () => {
+              // Image is now cached, safe to swap src
+              // Keep blur on during swap to hide any flicker
+              setCurrentVariant(bestVariant);
+            };
+            
+            img.onerror = () => {
+              console.error(`Failed to load variant for slide ${slide.id}: ${bestVariant.src}`);
+              setIsUpgrading(false);
+            };
+          }
+        }
+      }, 150);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [currentVariant, slide, getBestVariant]);
 
   return (
     <div
@@ -145,12 +207,26 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
           fetchPriority={isActive ? "high" : "auto"}
           onLoad={() => {
             setIsLoaded(true);
+            // When new variant loads, wait for paint then remove blur
+            if (isUpgrading) {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  setTimeout(() => {
+                    setIsUpgrading(false);
+                  }, 100);
+                });
+              });
+            }
             if (!loaded) {
               onLoaded();
             }
           }}
-          className={`relative z-10 h-auto w-full max-h-[85vh] object-contain transition-opacity duration-300 ${
-            isLoaded ? "opacity-100" : "opacity-0"
+          style={{
+            filter: isUpgrading ? "blur(12px)" : "none",
+            transition: "filter 300ms ease-in-out",
+          }}
+          className={`relative z-10 h-auto w-full max-h-[85vh] object-contain ${
+            isLoaded || isUpgrading ? "opacity-100" : "opacity-0"
           }`}
         />
       </div>

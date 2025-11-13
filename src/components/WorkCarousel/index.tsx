@@ -324,6 +324,10 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
           className={`absolute left-0 top-0 bottom-0 w-1/2 z-10 bg-transparent border-none focus:outline-none ${
             isAboutOpen ? "pointer-events-none" : "pointer-events-auto cursor-w-resize"
           }`}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          onWheel={handleWheel}
         />
         <button
           type="button"
@@ -332,6 +336,10 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
           className={`absolute right-0 top-0 bottom-0 w-1/2 z-10 bg-transparent border-none focus:outline-none ${
             isAboutOpen ? "pointer-events-none" : "pointer-events-auto cursor-e-resize"
           }`}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          onWheel={handleWheel}
         />
         <div className="flex flex-1 absolute z-1 top-0 left-0 right-0 bottom-0 items-center justify-center">
           <div className="relative flex w-full max-w-full md:max-w-[90vw] flex-col items-center">
