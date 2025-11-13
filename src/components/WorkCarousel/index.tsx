@@ -2,6 +2,7 @@
 
 import {
   type PointerEvent,
+  type TouchEvent,
   type WheelEvent,
   useCallback,
   useEffect,
@@ -29,6 +30,7 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
   const [loadedSlides, setLoadedSlides] = useState<Record<number, boolean>>({});
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const pointerStartX = useRef<number | null>(null);
+  const touchStartX = useRef<number | null>(null);
   const scrollDelta = useRef(0);
   const carouselRef = useRef<HTMLElement>(null);
   const total = slides.length;
@@ -98,6 +100,31 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
 
   const handlePointerCancel = () => {
     pointerStartX.current = null;
+  };
+
+  const handleTouchStart = (event: TouchEvent<HTMLElement>) => {
+    if (event.touches.length === 1) {
+      touchStartX.current = event.touches[0].clientX;
+    }
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLElement>) => {
+    if (touchStartX.current === null) return;
+    if (event.changedTouches.length === 1) {
+      const delta = event.changedTouches[0].clientX - touchStartX.current;
+      if (Math.abs(delta) > SWIPE_THRESHOLD) {
+        if (delta < 0) {
+          handleNext();
+        } else {
+          handlePrevious();
+        }
+      }
+    }
+    touchStartX.current = null;
+  };
+
+  const handleTouchCancel = () => {
+    touchStartX.current = null;
   };
 
   const handleWheel = useCallback(
@@ -309,11 +336,14 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
           isAboutOpen ? "pointer-events-none opacity-0" : "opacity-100 pointer-events-auto"
         }`}
         style={{
-          touchAction: "none", // Prevent default touch behaviors to allow custom swipe handling
+          touchAction: "pan-y pinch-zoom", // Allow vertical scrolling and pinch zoom, but handle horizontal swipes
         }}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
         onWheel={handleWheel}
       >
         {/* Invisible navigation buttons */}
@@ -324,9 +354,13 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
           className={`absolute left-0 top-0 bottom-0 w-1/2 z-10 bg-transparent border-none focus:outline-none ${
             isAboutOpen ? "pointer-events-none" : "pointer-events-auto cursor-w-resize"
           }`}
+          style={{ touchAction: "manipulation" }}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
           onWheel={handleWheel}
         />
         <button
@@ -336,9 +370,13 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
           className={`absolute right-0 top-0 bottom-0 w-1/2 z-10 bg-transparent border-none focus:outline-none ${
             isAboutOpen ? "pointer-events-none" : "pointer-events-auto cursor-e-resize"
           }`}
+          style={{ touchAction: "manipulation" }}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
           onWheel={handleWheel}
         />
         <div className="flex flex-1 absolute z-1 top-0 left-0 right-0 bottom-0 items-center justify-center">

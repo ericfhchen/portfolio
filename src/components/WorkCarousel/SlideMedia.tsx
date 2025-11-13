@@ -30,16 +30,22 @@ export function SlideMedia({ slide, isActive }: SlideMediaProps) {
   }, [isActive]);
 
   return (
-    <div className={`${isActive ? "flex" : "hidden"} w-full flex-col items-center`} aria-hidden={!isActive}>
+    <div className={`${isActive ? "flex" : "hidden"} w-full flex-col items-center justify-center`} aria-hidden={!isActive}>
       {hasAttachment ? (
         <video
           ref={videoRef}
-          className="w-full max-h-[85vh] rounded-none bg-transparent"
+          className="w-full max-w-full max-h-[85vh] rounded-none bg-transparent object-contain"
           muted
           loop
           playsInline
           preload="metadata"
           aria-label={slide.title}
+          style={{
+            // Ensure videos fit within viewport bounds
+            height: "auto",
+            maxHeight: "85vh",
+            maxWidth: "100vw",
+          }}
         >
           <source src={slide.attachmentUrl} type={slide.attachmentContentType ?? "video/mp4"} />
           Your browser does not support the video tag.

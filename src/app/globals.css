@@ -30,6 +30,8 @@ body {
   font-size: inherit !important;
   height: 100%;
   overflow: hidden;
+  /* Prevent double-tap zoom on iOS Safari */
+  touch-action: manipulation;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -41,4 +43,9 @@ body {
 .hide-scrollbar {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
+}
+
+/* Prevent accidental zoom on button taps and other interactive elements */
+button, a {
+  touch-action: manipulation;
 }
