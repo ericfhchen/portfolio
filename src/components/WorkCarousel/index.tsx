@@ -24,7 +24,7 @@ type WorkCarouselProps = {
 
 const SWIPE_THRESHOLD = 40;
 const SCROLL_THRESHOLD = 40;
-const MOBILE_SCROLL_THRESHOLD = 60; // Higher threshold for mobile (less aggressive)
+const MOBILE_SCROLL_THRESHOLD = 80; // Higher threshold for mobile (less aggressive)
 
 export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
   const [index, setIndex] = useState(0);
