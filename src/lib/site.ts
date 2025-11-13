@@ -84,7 +84,7 @@ export function buildSiteMetadata(): Metadata {
       description: `Eric L. Chen is a Toronto-based designer and strategist...`,
       images: [
         {
-          url: '/opengraph-image.jpg',
+          url: `${siteOrigin}/opengraph-image.jpg`,
           width: 1200,
           height: 630,
           alt: `${siteTitle}`,
@@ -95,7 +95,7 @@ export function buildSiteMetadata(): Metadata {
       card: "summary_large_image",
       title: siteTitle,
       description: `Eric L. Chen is a Toronto-based designer and strategist...`,
-      images: ['/opengraph-image.jpg'],
+      images: [`${siteOrigin}/opengraph-image.jpg`],
     },
   };
 }
