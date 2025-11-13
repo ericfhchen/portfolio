@@ -23,7 +23,19 @@ const nextConfig: NextConfig = {
       return [];
     }
 
+    console.log('Blog host configured:', blogHost); // Add this temporarily
+
     return [
+      {
+        source: "/",
+        has: [
+          {
+            type: "host",
+            value: blogHost,
+          },
+        ],
+        destination: "/blog",
+      },
       {
         source: "/:path*",
         has: [
