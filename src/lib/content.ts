@@ -167,16 +167,6 @@ function imageAltText(block: ArenaImageBlock): string {
 export async function getWorkSlides(): Promise<WorkSlide[]> {
   const channel = await fetchWorkChannel();
 
-  console.log(
-    "work channel blocks",
-    channel.contents.map((block) => ({
-      id: block.id,
-      class: block.class,
-      hasEmbed: "embed" in block && !!block.embed?.html,
-      hasAttachment: "attachment" in block && !!block.attachment?.url,
-    })),
-  );
-
   const slides = await Promise.all(
     channel.contents
       .filter((block) => isImageBlock(block) || isMediaBlock(block) || isAttachmentBlock(block))
