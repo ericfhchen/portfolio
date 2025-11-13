@@ -1,6 +1,9 @@
 // next.config.ts
 import type { NextConfig } from "next";
 
+const rawBlogDomain = process.env.SITE_BLOG_DOMAIN ?? "blog.ericlchen.com";
+const blogHost = rawBlogDomain.replace(/^https?:\/\//, "").trim();
+
 const nextConfig: NextConfig = {
   images: {
     deviceSizes: [480, 768, 1024, 1280, 1536, 1920, 2560, 3200],
@@ -9,6 +12,29 @@ const nextConfig: NextConfig = {
     dangerouslyAllowSVG: true,
     contentSecurityPolicy:
       "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; script-src 'none';",
+    localPatterns: [
+      {
+        pathname: "/api/arena/image/**",
+      },
+    ],
+  },
+  async rewrites() {
+    if (!blogHost) {
+      return [];
+    }
+
+    return [
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: blogHost,
+          },
+        ],
+        destination: "/blog/:path*",
+      },
+    ];
   },
 };
 

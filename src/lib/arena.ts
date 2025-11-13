@@ -70,7 +70,18 @@ export interface ArenaMediaBlock extends ArenaBaseBlock {
   attachment?: ArenaAttachment | null;
 }
 
-export type ArenaBlock = ArenaTextBlock | ArenaImageBlock | ArenaMediaBlock | ArenaAttachmentBlock | ArenaBaseBlock;
+export interface ArenaLinkBlock extends ArenaBaseBlock {
+  class: "Link";
+  image?: ArenaImage | null;
+}
+
+export type ArenaBlock =
+  | ArenaTextBlock
+  | ArenaImageBlock
+  | ArenaMediaBlock
+  | ArenaAttachmentBlock
+  | ArenaLinkBlock
+  | ArenaBaseBlock;
 
 export interface ArenaChannel {
   id: number;
@@ -146,5 +157,9 @@ export function isMediaBlock(block: ArenaBlock): block is ArenaMediaBlock {
 
 export function isAttachmentBlock(block: ArenaBlock): block is ArenaAttachmentBlock {
   return block.class === "Attachment" && typeof block === "object" && "attachment" in block && !!block.attachment?.url;
+}
+
+export function isLinkBlock(block: ArenaBlock): block is ArenaLinkBlock {
+  return block.class === "Link";
 }
 

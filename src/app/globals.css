@@ -45,6 +45,18 @@ body {
   scrollbar-width: none;  /* Firefox */
 }
 
+/* Hide scrollbar on mobile only */
+@media (max-width: 767px) {
+  body::-webkit-scrollbar {
+    display: none;
+  }
+  
+  body {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}
+
 /* Prevent accidental zoom on button taps and other interactive elements */
 button, a {
   touch-action: manipulation;

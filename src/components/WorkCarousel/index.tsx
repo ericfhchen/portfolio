@@ -20,13 +20,14 @@ type WorkCarouselProps = {
   slides: WorkSlide[];
   name: string;
   about: BioContent;
+  blogUrl: string;
 };
 
 const SWIPE_THRESHOLD = 40;
 const SCROLL_THRESHOLD = 40;
 const MOBILE_SCROLL_THRESHOLD = 120; // Higher threshold for mobile (less aggressive)
 
-export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
+export function WorkCarousel({ slides, name, about, blogUrl }: WorkCarouselProps) {
   const [index, setIndex] = useState(0);
   const [loadedSlides, setLoadedSlides] = useState<Record<number, boolean>>({});
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -423,19 +424,27 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
         >
           {isAboutOpen ? "CLOSE" : name}
         </button>
-        <span
-          className={`leading-none transition-opacity duration-100 whitespace-nowrap pointer-events-auto ${
-            isAboutOpen ? "opacity-0" : "opacity-100"
-          }`}
-          onPointerDown={!isAboutOpen ? handlePointerDown : undefined}
-          onPointerUp={!isAboutOpen ? handlePointerUp : undefined}
-          onPointerCancel={!isAboutOpen ? handlePointerCancel : undefined}
-          onWheel={!isAboutOpen ? handleWheel : undefined}
-          aria-live="polite"
-          aria-hidden={isAboutOpen}
-        >
-          {index + 1} / {total}
-        </span>
+        <div className="pointer-events-auto flex items-center gap-4">
+          <a
+            href={blogUrl}
+            className="text-xs uppercase tracking-[0.35em] text-neutral-900 transition-opacity duration-100 hover:opacity-70 focus:outline-none"
+          >
+            Blog
+          </a>
+          <span
+            className={`leading-none transition-opacity duration-100 whitespace-nowrap ${
+              isAboutOpen ? "opacity-0" : "opacity-100"
+            }`}
+            onPointerDown={!isAboutOpen ? handlePointerDown : undefined}
+            onPointerUp={!isAboutOpen ? handlePointerUp : undefined}
+            onPointerCancel={!isAboutOpen ? handlePointerCancel : undefined}
+            onWheel={!isAboutOpen ? handleWheel : undefined}
+            aria-live="polite"
+            aria-hidden={isAboutOpen}
+          >
+            {index + 1} / {total}
+          </span>
+        </div>
       </div>
 
       {/* About Overlay - Hidden by default, appears when toggled */}

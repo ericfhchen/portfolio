@@ -4,9 +4,23 @@ import type { Metadata } from "next";
 
 const FALLBACK_TITLE = "Eric L. Chen";
 const FALLBACK_DOMAIN = "ericlchen.com";
+const FALLBACK_BLOG_DOMAIN = `blog.${FALLBACK_DOMAIN}`;
+
+function ensureProtocol(domain: string): string {
+  return domain.startsWith("http") ? domain : `https://${domain}`;
+}
 
 const siteTitle = process.env.SITE_TITLE ?? FALLBACK_TITLE;
 const siteDomain = process.env.SITE_DOMAIN ?? FALLBACK_DOMAIN;
+const inferredBlogDomain =
+  process.env.SITE_BLOG_DOMAIN ??
+  (siteDomain.startsWith("http")
+    ? ensureProtocol(siteDomain).replace("://", "://blog.")
+    : `blog.${siteDomain}`);
+const blogDomain = inferredBlogDomain || FALLBACK_BLOG_DOMAIN;
+
+const siteOrigin = ensureProtocol(siteDomain);
+const blogOrigin = ensureProtocol(blogDomain);
 
 export function getSiteTitle(): string {
   return siteTitle;
@@ -16,11 +30,21 @@ export function getSiteDomain(): string {
   return siteDomain;
 }
 
-export function buildSiteMetadata(): Metadata {
-  const baseUrl = siteDomain.startsWith("http") ? siteDomain : `https://${siteDomain}`;
+export function getSiteOrigin(): string {
+  return siteOrigin;
+}
 
+export function getBlogDomain(): string {
+  return blogDomain;
+}
+
+export function getBlogOrigin(): string {
+  return blogOrigin;
+}
+
+export function buildSiteMetadata(): Metadata {
   return {
-    metadataBase: new URL(baseUrl),
+    metadataBase: new URL(siteOrigin),
     title: {
       default: siteTitle,
       template: `%s · ${siteTitle}`,
@@ -55,7 +79,7 @@ export function buildSiteMetadata(): Metadata {
     openGraph: {
       title: siteTitle,
       siteName: siteTitle,
-      url: baseUrl,
+      url: siteOrigin,
       type: "website",
       description: `Eric L. Chen is a Toronto-based designer and strategist...`,
       images: [

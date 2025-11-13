@@ -45,6 +45,16 @@ curl -X POST https://your-domain.com/api/revalidate \
   }'
 ```
 
+**To refresh the Blog channel:**
+```bash
+curl -X POST https://your-domain.com/api/revalidate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "secret": "your_random_secret_string_here",
+    "tag": "arena-channel-your-blog-channel-slug"
+  }'
+```
+
 ### Method 2: Using a URL (Browser/GET request)
 
 For easier testing, you can also use a GET request:
@@ -77,6 +87,7 @@ async function revalidateArenaContent(channelSlug) {
 // Usage:
 revalidateArenaContent('your-bio-channel-slug');
 revalidateArenaContent('your-work-channel-slug');
+revalidateArenaContent('your-blog-channel-slug');
 ```
 
 ## Cache Tags

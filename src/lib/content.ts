@@ -7,11 +7,13 @@ import {
   ArenaBlock,
   ArenaChannel,
   ArenaImageBlock,
+  ArenaLinkBlock,
   ArenaMediaBlock,
   ArenaTextBlock,
   getChannel,
   isAttachmentBlock,
   isImageBlock,
+  isLinkBlock,
   isMediaBlock,
   isTextBlock,
 } from "./arena";
@@ -19,8 +21,9 @@ import { fetchBlurData } from "./blur";
 
 const BIO_REVALIDATE_SECONDS = 300;
 const WORK_REVALIDATE_SECONDS = 300;
+const BLOG_REVALIDATE_SECONDS = 300;
 
-function getEnv(key: "ARENA_BIO_CHANNEL" | "ARENA_WORK_CHANNEL"): string {
+function getEnv(key: "ARENA_BIO_CHANNEL" | "ARENA_WORK_CHANNEL" | "ARENA_BLOG_CHANNEL"): string {
   const value = process.env[key];
   if (!value) {
     throw new Error(`Missing required environment variable: ${key}`);
@@ -28,7 +31,15 @@ function getEnv(key: "ARENA_BIO_CHANNEL" | "ARENA_WORK_CHANNEL"): string {
   return value;
 }
 
-function blockHtml(block: ArenaTextBlock | ArenaMediaBlock | ArenaImageBlock | ArenaAttachmentBlock | undefined): string {
+function blockHtml(
+  block:
+    | ArenaTextBlock
+    | ArenaMediaBlock
+    | ArenaImageBlock
+    | ArenaAttachmentBlock
+    | ArenaLinkBlock
+    | undefined,
+): string {
   if (!block) return "";
 
   if (isTextBlock(block)) {
@@ -69,6 +80,14 @@ function blockHtml(block: ArenaTextBlock | ArenaMediaBlock | ArenaImageBlock | A
     return addTargetBlankToLinks(html);
   }
 
+  if (isLinkBlock(block)) {
+    const metadataDescription = getMetadataString(block.metadata, "description");
+    const html = typeof block.description_html === "string" 
+      ? block.description_html 
+      : (metadataDescription ? escapeHtml(metadataDescription) : "");
+    return typeof html === "string" ? addTargetBlankToLinks(html) : "";
+  }
+
   return "";
 }
 
@@ -97,11 +116,27 @@ function parseMarkdownLinks(text: string): string {
   );
 }
 
+function getMetadataString(metadata: Record<string, unknown> | undefined, key: string): string | undefined {
+  if (!metadata) return undefined;
+  const value = metadata[key];
+  return typeof value === "string" ? value : undefined;
+}
+
 function getBlockByTitle<T extends ArenaBlock>(channel: ArenaChannel, title: string, predicate?: (block: ArenaBlock) => block is T): T | undefined {
   const block = channel.contents.find((item) => item.title?.trim().toLowerCase() === title.trim().toLowerCase());
   if (!block) return undefined;
   if (!predicate) return block as T;
   return predicate(block) ? block : undefined;
+}
+
+function createBlogBaseEntry(block: ArenaBlock) {
+  return {
+    id: block.id,
+    slug: block.slug,
+    createdAt: block.created_at,
+    updatedAt: block.updated_at,
+    title: block.title ?? block.generated_title ?? null,
+  };
 }
 
 const fetchBioChannel = cache(async () => {
@@ -112,6 +147,11 @@ const fetchBioChannel = cache(async () => {
 const fetchWorkChannel = cache(async () => {
   const slug = getEnv("ARENA_WORK_CHANNEL");
   return getChannel(slug, { revalidate: WORK_REVALIDATE_SECONDS });
+});
+
+const fetchBlogChannel = cache(async () => {
+  const slug = getEnv("ARENA_BLOG_CHANNEL");
+  return getChannel(slug, { revalidate: BLOG_REVALIDATE_SECONDS });
 });
 
 export type BioContent = {
@@ -286,5 +326,217 @@ export async function getWorkSlides(): Promise<WorkSlide[]> {
   );
 
   return slides;
+}
+
+type BlogImageResource = {
+  src: string;
+  width: number;
+  height: number;
+};
+
+type BlogPlaceholder = {
+  src: string;
+  width: number;
+  height: number;
+};
+
+type BlogLinkMetadata = {
+  title: string | undefined;
+  description: string | undefined;
+  siteName: string | undefined;
+  hostname: string | undefined;
+};
+
+type BlogBaseEntry = ReturnType<typeof createBlogBaseEntry>;
+
+export type BlogTextEntry = BlogBaseEntry & {
+  kind: "text";
+  html: string;
+};
+
+export type BlogImageEntry = BlogBaseEntry & {
+  kind: "image";
+  image: BlogImageResource;
+  alt: string;
+  captionHtml: string;
+  placeholder: BlogPlaceholder | undefined;
+};
+
+export type BlogMediaEntry = BlogBaseEntry & {
+  kind: "media";
+  embedHtml: string | undefined;
+  attachmentUrl: string | undefined;
+  attachmentContentType: string | undefined;
+  captionHtml: string;
+};
+
+export type BlogLinkEntry = BlogBaseEntry & {
+  kind: "link";
+  url: string;
+  captionHtml: string;
+  previewImage: BlogImageResource | undefined;
+  metadata: BlogLinkMetadata;
+};
+
+export type BlogEntry = BlogTextEntry | BlogImageEntry | BlogMediaEntry | BlogLinkEntry;
+
+function resolveImageVariantKey(block: ArenaImageBlock): "display" | "large" | "original" {
+  if (block.image.display?.url) return "display";
+  if (block.image.large?.url) return "large";
+  return "original";
+}
+
+function resolveLinkPreviewImage(block: ArenaLinkBlock): BlogImageResource | undefined {
+  const candidate =
+    block.image?.display ?? block.image?.large ?? block.image?.thumb ?? block.image?.original ?? null;
+  if (!candidate?.url) return undefined;
+
+  const fallbackWidth = block.image?.original?.width ?? 1200;
+  const fallbackHeight = block.image?.original?.height ?? 630;
+
+  return {
+    src: candidate.url,
+    width: candidate.width ?? fallbackWidth,
+    height: candidate.height ?? fallbackHeight,
+  };
+}
+
+export async function getBlogEntries(): Promise<BlogEntry[]> {
+  const channel = await fetchBlogChannel();
+
+  const entries = await Promise.all(
+    channel.contents.map(async (block) => {
+      if (isTextBlock(block)) {
+        const base = createBlogBaseEntry(block);
+        const html = blockHtml(block);
+        if (!html || typeof html !== "string") {
+          return null;
+        }
+
+        return {
+          ...base,
+          kind: "text" as const,
+          html,
+        };
+      }
+
+      if (isImageBlock(block)) {
+        const base = createBlogBaseEntry(block);
+        const variantKey = resolveImageVariantKey(block);
+        const chosenVariant =
+          variantKey === "display"
+            ? block.image.display
+            : variantKey === "large"
+              ? block.image.large
+              : block.image.original;
+        const originalWidth = block.image.original.width ?? 1600;
+        const originalHeight = block.image.original.height ?? 900;
+
+        const image: BlogImageResource = {
+          src: `/api/arena/image/${block.id}?variant=${variantKey}`,
+          width: chosenVariant?.width ?? originalWidth,
+          height: chosenVariant?.height ?? originalHeight,
+        };
+
+        let placeholder: BlogPlaceholder | undefined;
+        const placeholderSource =
+          block.image.thumb?.url ??
+          block.image.display?.url ??
+          block.image.large?.url ??
+          block.image.original.url;
+
+        if (placeholderSource) {
+          try {
+            const blur = await fetchBlurData(placeholderSource);
+            placeholder = {
+              src: blur.dataUrl,
+              width: blur.width,
+              height: blur.height,
+            };
+          } catch (error) {
+            console.error(`Failed to generate blur placeholder for blog image block ${block.id}:`, error);
+          }
+        }
+
+        const captionHtml = blockHtml(block);
+        return {
+          ...base,
+          kind: "image" as const,
+          image,
+          alt: imageAltText(block),
+          captionHtml: typeof captionHtml === "string" ? captionHtml : "",
+          placeholder,
+        };
+      }
+
+      if (isLinkBlock(block)) {
+        const base = createBlogBaseEntry(block);
+        const sourceUrl = typeof block.source?.url === "string" ? block.source.url : null;
+        const sourceSource = typeof block.source?.source === "string" ? block.source.source : null;
+        const url = sourceUrl ?? sourceSource ?? "";
+
+        if (!url || typeof url !== "string") {
+          return null;
+        }
+
+        const metadataTitle =
+          getMetadataString(block.metadata, "title") ?? block.title ?? block.generated_title ?? undefined;
+        const metadataDescription = getMetadataString(block.metadata, "description");
+        const providerName = typeof block.source?.provider_name === "string" ? block.source.provider_name : null;
+        const provider = typeof block.source?.provider === "string" ? block.source.provider : null;
+        const metadataSiteName =
+          getMetadataString(block.metadata, "site_name") ??
+          providerName ??
+          provider ??
+          undefined;
+
+        let hostname: string | undefined;
+        if (url) {
+          try {
+            const parsed = new URL(url);
+            hostname = parsed.hostname.replace(/^www\./, "");
+          } catch {
+            hostname = undefined;
+          }
+        }
+
+        const captionHtml = blockHtml(block);
+        return {
+          ...base,
+          kind: "link" as const,
+          url,
+          captionHtml: typeof captionHtml === "string" ? captionHtml : "",
+          previewImage: resolveLinkPreviewImage(block),
+          metadata: {
+            title: metadataTitle,
+            description: metadataDescription,
+            siteName: metadataSiteName ?? hostname,
+            hostname,
+          },
+        };
+      }
+
+      if (isMediaBlock(block) || isAttachmentBlock(block)) {
+        const base = createBlogBaseEntry(block);
+        const embedHtml = isMediaBlock(block) ? (typeof block.embed?.html === "string" ? block.embed.html : undefined) : undefined;
+        const attachmentUrl = block.attachment?.url ? `/api/arena/media/${block.id}` : undefined;
+        const attachmentContentType = typeof block.attachment?.content_type === "string" ? block.attachment.content_type : undefined;
+        const captionHtml = blockHtml(block);
+
+        return {
+          ...base,
+          kind: "media" as const,
+          embedHtml,
+          attachmentUrl,
+          attachmentContentType,
+          captionHtml: typeof captionHtml === "string" ? captionHtml : "",
+        };
+      }
+
+      return null;
+    }),
+  );
+
+  return entries.filter(Boolean) as BlogEntry[];
 }
 
