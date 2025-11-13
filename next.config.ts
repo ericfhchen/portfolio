@@ -1,9 +1,6 @@
 // next.config.ts
 import type { NextConfig } from "next";
 
-const rawBlogDomain = process.env.SITE_BLOG_DOMAIN ?? "blog.ericlchen.com";
-const blogHost = rawBlogDomain.replace(/^https?:\/\//, "").trim();
-
 const nextConfig: NextConfig = {
   images: {
     deviceSizes: [480, 768, 1024, 1280, 1536, 1920, 2560, 3200],
@@ -17,36 +14,6 @@ const nextConfig: NextConfig = {
         pathname: "/api/arena/image/**",
       },
     ],
-  },
-  async rewrites() {
-    if (!blogHost) {
-      return [];
-    }
-
-    console.log('Blog host configured:', blogHost); // Add this temporarily
-
-    return [
-      {
-        source: "/",
-        has: [
-          {
-            type: "host",
-            value: blogHost,
-          },
-        ],
-        destination: "/blog",
-      },
-      {
-        source: "/:path*",
-        has: [
-          {
-            type: "host",
-            value: blogHost,
-          },
-        ],
-        destination: "/blog/:path*",
-      },
-    ];
   },
 };
 
