@@ -179,7 +179,7 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
         pointerEvents: isActive ? "none" : "none", // Images shouldn't block carousel events
       }}
     >
-      <div className="relative flex w-full max-h-[85vh] items-center justify-center overflow-hidden">
+      <div className="relative flex w-full max-h-[70vh] items-center justify-center overflow-hidden">
         {slide.placeholder ? (
           <div
             aria-hidden="true"
@@ -189,7 +189,7 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
           >
             <img
               src={slide.placeholder.src}
-              className="h-auto w-full max-h-[85vh] object-contain"
+              className="h-auto w-full max-h-[70vh] object-contain"
               style={{
                 filter: "blur(12px)",
               }}
@@ -225,7 +225,7 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
             filter: isUpgrading ? "blur(12px)" : "none",
             transition: "filter 300ms ease-in-out",
           }}
-          className={`relative z-10 h-auto w-full max-h-[85vh] object-contain ${
+          className={`relative z-10 h-auto w-full max-h-[70vh] object-contain ${
             isLoaded || isUpgrading ? "opacity-100" : "opacity-0"
           }`}
         />

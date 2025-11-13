@@ -34,16 +34,16 @@ export function SlideMedia({ slide, isActive }: SlideMediaProps) {
       {hasAttachment ? (
         <video
           ref={videoRef}
-          className="w-full max-w-full max-h-[85vh] rounded-none bg-transparent object-contain"
+          className="w-full max-w-full max-h-[70vh] rounded-none bg-transparent object-contain"
           muted
           loop
           playsInline
           preload="metadata"
           aria-label={slide.title}
           style={{
-            // Ensure videos fit within viewport bounds
+            // Ensure videos fit within viewport bounds, accounting for Safari UI (address bar, tab bar)
             height: "auto",
-            maxHeight: "85vh",
+            maxHeight: "70vh",
             maxWidth: "100vw",
           }}
         >

@@ -31,6 +31,8 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const pointerStartX = useRef<number | null>(null);
   const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const touchDeltaY = useRef(0);
   const scrollDelta = useRef(0);
   const carouselRef = useRef<HTMLElement>(null);
   const total = slides.length;
@@ -81,6 +83,127 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
     };
   }, [goTo, handleNext, handlePrevious, total, isAboutOpen]);
 
+  // Global wheel/scroll navigation (works anywhere on the page)
+  useEffect(() => {
+    if (isAboutOpen) return;
+
+    const handleGlobalWheel = (event: Event) => {
+      const wheelEvent = event as globalThis.WheelEvent;
+      
+      // Prevent default page scrolling
+      event.preventDefault();
+
+      const { deltaX, deltaY } = wheelEvent;
+      const dominantDelta = Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY;
+
+      scrollDelta.current += dominantDelta;
+
+      if (scrollDelta.current >= SCROLL_THRESHOLD) {
+        handleNext();
+        scrollDelta.current = 0;
+      } else if (scrollDelta.current <= -SCROLL_THRESHOLD) {
+        handlePrevious();
+        scrollDelta.current = 0;
+      }
+    };
+
+    // Add global wheel listener with passive: false to allow preventDefault
+    window.addEventListener("wheel", handleGlobalWheel, { passive: false });
+
+    return () => {
+      window.removeEventListener("wheel", handleGlobalWheel);
+    };
+  }, [handleNext, handlePrevious, isAboutOpen]);
+
+  // Global touch navigation (works anywhere on the page)
+  useEffect(() => {
+    if (isAboutOpen) return;
+
+    const handleGlobalTouchStart = (event: Event) => {
+      const touchEvent = event as globalThis.TouchEvent;
+      if (touchEvent.touches.length === 1) {
+        touchStartX.current = touchEvent.touches[0].clientX;
+        touchStartY.current = touchEvent.touches[0].clientY;
+        touchDeltaY.current = 0;
+      }
+    };
+
+    const handleGlobalTouchMove = (event: Event) => {
+      if (touchStartY.current === null || touchStartX.current === null) return;
+      
+      const touchEvent = event as globalThis.TouchEvent;
+      if (touchEvent.touches.length !== 1) return;
+
+      const currentY = touchEvent.touches[0].clientY;
+      const currentX = touchEvent.touches[0].clientX;
+      const deltaY = touchStartY.current - currentY; // Positive = scrolling down
+      const deltaX = Math.abs(touchStartX.current - currentX);
+
+      // If horizontal movement is dominant, treat as swipe
+      if (deltaX > Math.abs(deltaY) && deltaX > SWIPE_THRESHOLD) {
+        return; // Let handleGlobalTouchEnd handle horizontal swipes
+      }
+
+      // Vertical scrolling for rapid navigation
+      if (Math.abs(deltaY) > 5) {
+        // Prevent default to stop page bounce
+        event.preventDefault();
+        
+        touchDeltaY.current += deltaY;
+        touchStartY.current = currentY; // Reset for continuous tracking
+
+        if (touchDeltaY.current >= SCROLL_THRESHOLD) {
+          handleNext();
+          touchDeltaY.current = 0;
+        } else if (touchDeltaY.current <= -SCROLL_THRESHOLD) {
+          handlePrevious();
+          touchDeltaY.current = 0;
+        }
+      }
+    };
+
+    const handleGlobalTouchEnd = (event: Event) => {
+      if (touchStartX.current === null || touchStartY.current === null) return;
+      
+      const touchEvent = event as globalThis.TouchEvent;
+      if (touchEvent.changedTouches.length === 1) {
+        const deltaX = touchEvent.changedTouches[0].clientX - touchStartX.current;
+        const deltaY = touchStartY.current - touchEvent.changedTouches[0].clientY;
+        
+        // Only trigger swipe if horizontal movement is dominant
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
+          if (deltaX < 0) {
+            handleNext();
+          } else {
+            handlePrevious();
+          }
+        }
+      }
+      touchStartX.current = null;
+      touchStartY.current = null;
+      touchDeltaY.current = 0;
+    };
+
+    const handleGlobalTouchCancel = () => {
+      touchStartX.current = null;
+      touchStartY.current = null;
+      touchDeltaY.current = 0;
+    };
+
+    // Add global touch listeners with passive: false to allow preventDefault
+    window.addEventListener("touchstart", handleGlobalTouchStart, { passive: false });
+    window.addEventListener("touchmove", handleGlobalTouchMove, { passive: false });
+    window.addEventListener("touchend", handleGlobalTouchEnd, { passive: false });
+    window.addEventListener("touchcancel", handleGlobalTouchCancel, { passive: false });
+
+    return () => {
+      window.removeEventListener("touchstart", handleGlobalTouchStart);
+      window.removeEventListener("touchmove", handleGlobalTouchMove);
+      window.removeEventListener("touchend", handleGlobalTouchEnd);
+      window.removeEventListener("touchcancel", handleGlobalTouchCancel);
+    };
+  }, [handleNext, handlePrevious, isAboutOpen]);
+
   const handlePointerDown = (event: PointerEvent<HTMLElement>) => {
     pointerStartX.current = event.clientX;
   };
@@ -105,15 +228,52 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
   const handleTouchStart = (event: TouchEvent<HTMLElement>) => {
     if (event.touches.length === 1) {
       touchStartX.current = event.touches[0].clientX;
+      touchStartY.current = event.touches[0].clientY;
+      touchDeltaY.current = 0;
+    }
+  };
+
+  const handleTouchMove = (event: TouchEvent<HTMLElement>) => {
+    if (touchStartY.current === null || touchStartX.current === null) return;
+    if (event.touches.length !== 1) return;
+
+    const currentY = event.touches[0].clientY;
+    const currentX = event.touches[0].clientX;
+    const deltaY = touchStartY.current - currentY; // Positive = scrolling down
+    const deltaX = Math.abs(touchStartX.current - currentX);
+
+    // If horizontal movement is dominant, treat as swipe
+    if (deltaX > Math.abs(deltaY) && deltaX > SWIPE_THRESHOLD) {
+      return; // Let handleTouchEnd handle horizontal swipes
+    }
+
+    // Vertical scrolling for rapid navigation
+    if (Math.abs(deltaY) > 5) {
+      // Prevent default to stop page bounce
+      event.preventDefault();
+      
+      touchDeltaY.current += deltaY;
+      touchStartY.current = currentY; // Reset for continuous tracking
+
+      if (touchDeltaY.current >= SCROLL_THRESHOLD) {
+        handleNext();
+        touchDeltaY.current = 0;
+      } else if (touchDeltaY.current <= -SCROLL_THRESHOLD) {
+        handlePrevious();
+        touchDeltaY.current = 0;
+      }
     }
   };
 
   const handleTouchEnd = (event: TouchEvent<HTMLElement>) => {
-    if (touchStartX.current === null) return;
+    if (touchStartX.current === null || touchStartY.current === null) return;
     if (event.changedTouches.length === 1) {
-      const delta = event.changedTouches[0].clientX - touchStartX.current;
-      if (Math.abs(delta) > SWIPE_THRESHOLD) {
-        if (delta < 0) {
+      const deltaX = event.changedTouches[0].clientX - touchStartX.current;
+      const deltaY = touchStartY.current - event.changedTouches[0].clientY;
+      
+      // Only trigger swipe if horizontal movement is dominant
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
+        if (deltaX < 0) {
           handleNext();
         } else {
           handlePrevious();
@@ -121,10 +281,14 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
       }
     }
     touchStartX.current = null;
+    touchStartY.current = null;
+    touchDeltaY.current = 0;
   };
 
   const handleTouchCancel = () => {
     touchStartX.current = null;
+    touchStartY.current = null;
+    touchDeltaY.current = 0;
   };
 
   const handleWheel = useCallback(
@@ -336,12 +500,13 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
           isAboutOpen ? "pointer-events-none opacity-0" : "opacity-100 pointer-events-auto"
         }`}
         style={{
-          touchAction: "pan-y pinch-zoom", // Allow vertical scrolling and pinch zoom, but handle horizontal swipes
+          touchAction: "none", // Handle all touch events manually for carousel navigation
         }}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchCancel}
         onWheel={handleWheel}
@@ -354,11 +519,12 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
           className={`absolute left-0 top-0 bottom-0 w-1/2 z-10 bg-transparent border-none focus:outline-none ${
             isAboutOpen ? "pointer-events-none" : "pointer-events-auto cursor-w-resize"
           }`}
-          style={{ touchAction: "manipulation" }}
+          style={{ touchAction: "none" }}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
           onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchCancel}
           onWheel={handleWheel}
@@ -370,11 +536,12 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
           className={`absolute right-0 top-0 bottom-0 w-1/2 z-10 bg-transparent border-none focus:outline-none ${
             isAboutOpen ? "pointer-events-none" : "pointer-events-auto cursor-e-resize"
           }`}
-          style={{ touchAction: "manipulation" }}
+          style={{ touchAction: "none" }}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
           onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchCancel}
           onWheel={handleWheel}
