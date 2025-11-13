@@ -24,6 +24,7 @@ type WorkCarouselProps = {
 
 const SWIPE_THRESHOLD = 40;
 const SCROLL_THRESHOLD = 40;
+const MOBILE_SCROLL_THRESHOLD = 60; // Higher threshold for mobile (less aggressive)
 
 export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
   const [index, setIndex] = useState(0);
@@ -152,10 +153,11 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
         touchDeltaY.current += deltaY;
         touchStartY.current = currentY; // Reset for continuous tracking
 
-        if (touchDeltaY.current >= SCROLL_THRESHOLD) {
+        // Use mobile-specific threshold for touch events
+        if (touchDeltaY.current >= MOBILE_SCROLL_THRESHOLD) {
           handleNext();
           touchDeltaY.current = 0;
-        } else if (touchDeltaY.current <= -SCROLL_THRESHOLD) {
+        } else if (touchDeltaY.current <= -MOBILE_SCROLL_THRESHOLD) {
           handlePrevious();
           touchDeltaY.current = 0;
         }
