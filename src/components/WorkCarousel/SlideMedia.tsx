@@ -46,7 +46,7 @@ export function SlideMedia({ slide, isActive }: SlideMediaProps) {
         </video>
       ) : hasEmbed ? (
         <div
-          className="aspect-video w-full max-w-4xl"
+          className="aspect-video w-full max-w-4xl [&_a]:no-underline [&_a:hover]:opacity-70 [&_a]:transition-opacity"
           dangerouslySetInnerHTML={{ __html: slide.embedHtml ?? "" }}
           aria-label={slide.title}
         />

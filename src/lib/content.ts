@@ -32,30 +32,41 @@ function blockHtml(block: ArenaTextBlock | ArenaMediaBlock | ArenaImageBlock | A
   if (!block) return "";
 
   if (isTextBlock(block)) {
+    // Use raw content field to preserve exact line break spacing
     if (block.content) {
       const normalized = block.content.replace(/\r\n/g, "\n");
-      const escaped = escapeHtml(normalized);
-      return escaped.replace(/\n/g, "<br />");
+      // Parse markdown links in raw content
+      let withLinks = parseMarkdownLinks(normalized);
+      // Handle double line breaks first (preserve paragraph spacing)
+      withLinks = withLinks.replace(/\n\n+/g, '___DOUBLE_BR___');
+      // Convert single newlines to <br />
+      withLinks = withLinks.replace(/\n/g, '<br />');
+      // Convert double line break placeholder to two <br /> tags
+      withLinks = withLinks.replace(/___DOUBLE_BR___/g, '<br /><br />');
+      return withLinks;
     }
 
+    // Fallback to content_html if raw content is not available
     if (block.content_html) {
-      const normalizedHtml = block.content_html.replace(/\r\n/g, "\n");
-      return normalizedHtml.replace(/\n/g, "<br />");
+      return addTargetBlankToLinks(block.content_html);
     }
 
     return "";
   }
 
   if (isMediaBlock(block)) {
-    return block.embed?.html ?? block.description_html ?? "";
+    const html = block.embed?.html ?? block.description_html ?? "";
+    return addTargetBlankToLinks(html);
   }
 
   if (isAttachmentBlock(block)) {
-    return block.description_html ?? "";
+    const html = block.description_html ?? "";
+    return addTargetBlankToLinks(html);
   }
 
   if (isImageBlock(block)) {
-    return block.description_html ?? "";
+    const html = block.description_html ?? "";
+    return addTargetBlankToLinks(html);
   }
 
   return "";
@@ -68,6 +79,22 @@ function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function addTargetBlankToLinks(html: string): string {
+  // Add target="_blank" and rel="noopener noreferrer" to all <a> tags
+  return html.replace(
+    /<a(\s+)/gi,
+    '<a target="_blank" rel="noopener noreferrer"$1'
+  );
+}
+
+function parseMarkdownLinks(text: string): string {
+  // Convert markdown links [text](url) to HTML links with target="_blank"
+  return text.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+  );
 }
 
 function getBlockByTitle<T extends ArenaBlock>(channel: ArenaChannel, title: string, predicate?: (block: ArenaBlock) => block is T): T | undefined {

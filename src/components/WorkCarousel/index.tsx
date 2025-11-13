@@ -257,7 +257,7 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
       >
         {bioHtml ? (
           <div
-            className="space-y-2 [&_a]:underline [&_a]:underline-offset-4 [&_p]:m-0 [&_p]:max-w-prose max-w-full md:max-w-[33.33%] xl:max-w-[16.66%]"
+            className="[&_a]:no-underline [&_a:hover]:opacity-70 [&_a]:transition-opacity [&_p]:m-0 [&_p]:max-w-prose max-w-full md:max-w-[33.33%] xl:max-w-[16.66%]"
             dangerouslySetInnerHTML={{ __html: bioHtml }}
           />
         ) : null}
@@ -268,7 +268,7 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
             {hasDetailsSection ? (
               <section className="space-y-4">
                 <div
-                  className="space-y-2 [&_a]:underline [&_a]:underline-offset-4 [&_p]:m-0"
+                  className="space-y-2 [&_a]:no-underline [&_a:hover]:opacity-70 [&_a]:transition-opacity [&_p]:m-0"
                   dangerouslySetInnerHTML={{ __html: detailsHtml }}
                 />
               </section>
@@ -279,7 +279,7 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
                   <section className="space-y-2">
                     <h3 className="">Selected Clients</h3>
                     <div
-                      className="space-y-2 [&_a]:underline [&_a]:underline-offset-4 [&_p]:m-0"
+                      className="space-y-2 [&_a]:no-underline [&_a:hover]:opacity-70 [&_a]:transition-opacity [&_p]:m-0"
                       dangerouslySetInnerHTML={{ __html: clientsHtml }}
                     />
                   </section>
@@ -288,7 +288,7 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
                   <section className="space-y-2">
                     <h3 className="">Websites</h3>
                     <div
-                      className="space-y-2 [&_a]:underline [&_a]:underline-offset-4 [&_p]:m-0"
+                      className="space-y-2 [&_a]:no-underline [&_a:hover]:opacity-70 [&_a]:transition-opacity [&_p]:m-0"
                       dangerouslySetInnerHTML={{ __html: websitesHtml }}
                     />
                   </section>
@@ -297,6 +297,9 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
             ) : null}
           </div>
         ) : null}
+        <div className="absolute bottom-2 left-2 opacity-30">
+          © {new Date().getFullYear()} Eric L. Chen. All rights reserved.
+        </div>
       </div>
       <section
         ref={carouselRef}
@@ -354,8 +357,8 @@ export function WorkCarousel({ slides, name, about }: WorkCarouselProps) {
       </section>
       {currentCaptionHtml ? (
         <div
-          className={`absolute bottom-0 left-2 right-2 z-20 text-center leading-tight transition-opacity duration-100 opacity-100 pb-2 [@media(max-height:400px)]:hidden ${
-            isAboutOpen ? "pointer-events-none opacity-0" : "opacity-100"
+          className={`absolute bottom-0 left-2 right-2 z-20 text-center leading-tight transition-opacity duration-100 pb-2 [@media(max-height:400px)]:hidden [&_a]:no-underline [&_a:hover]:opacity-70 [&_a]:transition-opacity ${
+            isAboutOpen ? "pointer-events-none opacity-0" : "pointer-events-auto opacity-100"
           }`}
           onPointerDown={!isAboutOpen ? handlePointerDown : undefined}
           onPointerUp={!isAboutOpen ? handlePointerUp : undefined}
