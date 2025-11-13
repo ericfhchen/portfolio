@@ -119,7 +119,10 @@ async function arenaFetch<T>(path: string, init?: NextInit) {
 
 export async function getChannel(slug: string, options: FetchOptions = {}): Promise<ArenaChannel> {
   return arenaFetch<ArenaChannel>(`/channels/${slug}?per=200`, {
-    next: options.revalidate ? { revalidate: options.revalidate } : { revalidate: DEFAULT_REVALIDATE },
+    next: { 
+      revalidate: options.revalidate ?? DEFAULT_REVALIDATE,
+      tags: [`arena-channel-${slug}`],
+    },
   });
 }
 
