@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+:root {
+  --background: #000000;
+  --foreground: #eeeeee;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-size-base: 8px;
+  --font-size-md: 9px;
+}
+
+html {
+  height: 100%;
+  font-size: 11px !important;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 13px !important;
+  }
+}
+
+body {
+  background: var(--background);
+  color: #EEEEEE;
+  font-family: Helvetica Neue, Arial, sans-serif;
+  font-size: inherit !important;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
