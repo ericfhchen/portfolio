@@ -190,6 +190,8 @@ type SlideImageVariant = {
   src: string;
   width: number;
   height: number;
+  contentType?: string;
+  isSvg?: boolean;
 };
 
 type SlidePlaceholder = {
@@ -256,10 +258,25 @@ export async function getWorkSlides(): Promise<WorkSlide[]> {
                     ? block.image.display
                     : block.image.thumb;
             if (!target?.url) return undefined;
+            
+            // More thorough SVG detection
+            const urlLower = target.url.toLowerCase();
+            const isSvg = 
+              target.content_type === "image/svg+xml" ||
+              target.content_type?.startsWith("image/svg") ||
+              urlLower.endsWith('.svg') ||
+              urlLower.includes('.svg?') ||
+              urlLower.includes('.svg#') ||
+              urlLower.includes('/svg') ||
+              urlLower.includes('format=svg') ||
+              urlLower.includes('type=svg');
+            
             return {
               src: `${src}?variant=${variant}`,
               width: target.width ?? fallbackWidth,
               height: target.height ?? fallbackHeight,
+              contentType: target.content_type,
+              isSvg,
             };
           };
 
@@ -274,10 +291,12 @@ export async function getWorkSlides(): Promise<WorkSlide[]> {
           if (placeholderSource) {
             try {
               const blur = await fetchBlurData(placeholderSource);
+              // Use original image dimensions for placeholder to ensure aspect ratio matches
+              // regardless of which variant was used to generate the blur
               placeholder = {
                 src: blur.dataUrl,
-                width: blur.width,
-                height: blur.height,
+                width: originalWidth,
+                height: originalHeight,
               };
             } catch (error) {
               console.error(`Failed to generate blur placeholder for block ${block.id}:`, error);
@@ -285,6 +304,23 @@ export async function getWorkSlides(): Promise<WorkSlide[]> {
             }
           }
 
+          // Build variants (now async)
+          const originalVariant: SlideImageVariant = {
+            src: `${src}?variant=original`,
+            width: originalWidth,
+            height: originalHeight,
+            contentType: block.image.original.content_type,
+            isSvg: 
+              block.image.original.content_type === "image/svg+xml" ||
+              block.image.original.content_type?.startsWith("image/svg") ||
+              block.image.original.url.toLowerCase().endsWith('.svg') ||
+              block.image.original.url.toLowerCase().includes('.svg?') ||
+              block.image.original.url.toLowerCase().includes('.svg#') ||
+              block.image.original.url.toLowerCase().includes('/svg') ||
+              block.image.original.url.toLowerCase().includes('format=svg') ||
+              block.image.original.url.toLowerCase().includes('type=svg'),
+          };
+          
           return {
             kind: "image" as const,
             id: block.id,
@@ -293,14 +329,10 @@ export async function getWorkSlides(): Promise<WorkSlide[]> {
             width: originalWidth,
             height: originalHeight,
             variants: {
-              original: {
-                src: `${src}?variant=original`,
-                width: originalWidth,
-                height: originalHeight,
-              },
-              large: variantFrom("large", originalWidth, originalHeight),
-              display: variantFrom("display", originalWidth, originalHeight),
-              thumb: variantFrom("thumb", originalWidth, originalHeight),
+              original: originalVariant,
+              large: await variantFrom("large", originalWidth, originalHeight),
+              display: await variantFrom("display", originalWidth, originalHeight),
+              thumb: await variantFrom("thumb", originalWidth, originalHeight),
             },
             placeholder,
             captionHtml: blockHtml(block),

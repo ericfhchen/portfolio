@@ -34,7 +34,7 @@ export function SlideMedia({ slide, isActive }: SlideMediaProps) {
       {hasAttachment ? (
         <video
           ref={videoRef}
-          className="w-full max-w-full max-h-[70vh] rounded-none bg-transparent object-contain"
+          className="w-full max-w-full max-h-[75vh] md:max-h-[85vh] rounded-none bg-transparent object-contain"
           muted
           loop
           playsInline
@@ -43,7 +43,7 @@ export function SlideMedia({ slide, isActive }: SlideMediaProps) {
           style={{
             // Ensure videos fit within viewport bounds, accounting for Safari UI (address bar, tab bar)
             height: "auto",
-            maxHeight: "70vh",
+            maxHeight: "85vh",
             maxWidth: "100vw",
           }}
         >

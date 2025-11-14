@@ -62,8 +62,79 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
     return display ?? large ?? original;
   }, [slide.variants]);
 
+  // Check if ANY variant is an SVG - check both flag and fallback to URL/contentType check
+  const isSvgSlide = useMemo(() => {
+    // First check the flags
+    const hasSvgFlag = (
+      slide.variants.original?.isSvg === true ||
+      slide.variants.large?.isSvg === true ||
+      slide.variants.display?.isSvg === true ||
+      slide.variants.thumb?.isSvg === true
+    );
+    
+    if (hasSvgFlag) return true;
+    
+    // Fallback: check contentType and URL directly
+    const original = slide.variants.original;
+    if (original) {
+      const contentTypeSvg = original.contentType === "image/svg+xml" ||
+                             original.contentType?.startsWith("image/svg");
+      const urlSvg = original.src.toLowerCase().includes('svg');
+      return contentTypeSvg || urlSvg;
+    }
+    
+    return false;
+  }, [slide.variants]);
+
+  // Add effect to check content-type from API response
+  useEffect(() => {
+    if (!isActive || isSvgSlide) return;
+    
+    // Check if the current variant is actually an SVG by fetching headers
+    const checkContentType = async () => {
+      try {
+        const response = await fetch(currentVariant.src, { method: 'HEAD' });
+        const contentType = response.headers.get('content-type');
+        if (contentType === "image/svg+xml" || contentType?.startsWith("image/svg")) {
+          // Force original variant for SVG
+          if (currentVariant.src !== slide.variants.original.src) {
+            setCurrentVariant(slide.variants.original);
+          }
+        }
+      } catch (error) {
+        // Silently fail
+      }
+    };
+    
+    checkContentType();
+  }, [isActive, currentVariant.src, slide.variants.original.src, isSvgSlide]);
+
+  // Detect if current variant is an SVG - check both flag and fallback
+  const isSvg = useMemo(() => {
+    if (currentVariant.isSvg === true) return true;
+    
+    // Fallback checks
+    if (currentVariant.contentType === "image/svg+xml") return true;
+    if (currentVariant.src.toLowerCase().includes('svg') || 
+        currentVariant.src.toLowerCase().endsWith('.svg')) return true;
+    
+    // If this is an SVG slide, always treat current variant as SVG
+    if (isSvgSlide) return true;
+    
+    return false;
+  }, [currentVariant, isSvgSlide]);
+
   useEffect(() => {
     if (!isActive) return;
+    
+    // For SVGs, always use original and skip variant switching
+    if (isSvgSlide) {
+      // Force original variant for SVG slides
+      if (currentVariant.src !== slide.variants.original.src) {
+        setCurrentVariant(slide.variants.original);
+      }
+      return;
+    }
 
     let cancelled = false;
     let timeoutId: NodeJS.Timeout | null = null;
@@ -82,9 +153,7 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
         
         // Add timeout to fallback to smaller variant if loading takes too long
         timeoutId = setTimeout(() => {
-          if (!cancelled && currentVariant.src !== original.src) {
-            console.warn(`Image loading timeout for ${original.src}, keeping current variant`);
-          }
+          // Timeout reached, keeping current variant
         }, 10000);
         
         img.onload = () => {
@@ -111,7 +180,7 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
       cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [currentVariant, isActive, slide, getBestVariant]);
+  }, [currentVariant, isActive, slide, getBestVariant, isSvgSlide]);
 
   // Listen for window resize and upgrade variants when appropriate
   useEffect(() => {
@@ -179,7 +248,7 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
         pointerEvents: isActive ? "none" : "none", // Images shouldn't block carousel events
       }}
     >
-      <div className="relative flex w-full max-h-[70vh] items-center justify-center overflow-hidden">
+      <div className="relative flex w-full max-h-[85vh] items-center justify-center overflow-hidden">
         {slide.placeholder ? (
           <div
             aria-hidden="true"
@@ -189,7 +258,10 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
           >
             <img
               src={slide.placeholder.src}
-              className="h-auto w-full max-h-[70vh] object-contain"
+              alt=""
+              width={slide.placeholder.width}
+              height={slide.placeholder.height}
+              className="h-auto w-full max-h-[85vh] object-contain"
               style={{
                 filter: "blur(12px)",
               }}
@@ -225,7 +297,7 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
             filter: isUpgrading ? "blur(12px)" : "none",
             transition: "filter 300ms ease-in-out",
           }}
-          className={`relative z-10 h-auto w-full max-h-[70vh] object-contain ${
+          className={`relative z-10 h-auto w-full max-h-[85vh] object-contain ${
             isLoaded || isUpgrading ? "opacity-100" : "opacity-0"
           }`}
         />
