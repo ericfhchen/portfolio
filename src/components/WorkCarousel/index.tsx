@@ -25,7 +25,7 @@ type WorkCarouselProps = {
 
 const SWIPE_THRESHOLD = 40;
 const SCROLL_THRESHOLD = 40;
-const MOBILE_SCROLL_THRESHOLD = 120; // Higher threshold for mobile (less aggressive)
+const MOBILE_SCROLL_THRESHOLD = 80; // Higher threshold for mobile (less aggressive)
 
 export function WorkCarousel({ slides, name, about, blogUrl }: WorkCarouselProps) {
   const [index, setIndex] = useState(0);
@@ -425,12 +425,6 @@ export function WorkCarousel({ slides, name, about, blogUrl }: WorkCarouselProps
           {isAboutOpen ? "CLOSE" : name}
         </button>
         <div className="pointer-events-auto flex items-center gap-4">
-          <a
-            href={blogUrl}
-            className="text-xs uppercase tracking-[0.35em] text-neutral-900 transition-opacity duration-100 hover:opacity-70 focus:outline-none"
-          >
-            Blog
-          </a>
           <span
             className={`leading-none transition-opacity duration-100 whitespace-nowrap ${
               isAboutOpen ? "opacity-0" : "opacity-100"

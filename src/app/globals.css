@@ -3,6 +3,13 @@
 :root {
   --background: #000000;
   --foreground: #eeeeee;
+  --media-max-height: 75vh;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --media-max-height: 85vh;
+  }
 }
 
 @theme inline {

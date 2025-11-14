@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { WorkSlide } from "@/lib/content";
 
 type SlideMediaProps = {
@@ -10,6 +10,21 @@ export function SlideMedia({ slide, isActive }: SlideMediaProps) {
   const hasAttachment = Boolean(slide.attachmentUrl);
   const hasEmbed = Boolean(slide.embedHtml?.trim());
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [maxHeight, setMaxHeight] = useState("75vh");
+
+  useEffect(() => {
+    const updateMaxHeight = () => {
+      if (typeof window !== "undefined") {
+        setMaxHeight(window.innerWidth >= 768 ? "85vh" : "75vh");
+      }
+    };
+
+    updateMaxHeight();
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", updateMaxHeight);
+      return () => window.removeEventListener("resize", updateMaxHeight);
+    }
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -34,7 +49,7 @@ export function SlideMedia({ slide, isActive }: SlideMediaProps) {
       {hasAttachment ? (
         <video
           ref={videoRef}
-          className="w-full max-w-full max-h-[75vh] md:max-h-[85vh] rounded-none bg-transparent object-contain"
+          className="rounded-none bg-transparent object-contain"
           muted
           loop
           playsInline
@@ -42,9 +57,10 @@ export function SlideMedia({ slide, isActive }: SlideMediaProps) {
           aria-label={slide.title}
           style={{
             // Ensure videos fit within viewport bounds, accounting for Safari UI (address bar, tab bar)
-            height: "auto",
-            maxHeight: "85vh",
+            width: "100%",
             maxWidth: "100vw",
+            height: "auto",
+            maxHeight: maxHeight,
           }}
         >
           <source src={slide.attachmentUrl} type={slide.attachmentContentType ?? "video/mp4"} />
