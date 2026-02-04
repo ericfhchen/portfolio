@@ -1,7 +1,8 @@
 import "server-only";
 
 const ARENA_API_BASE = "https://api.are.na/v2";
-const DEFAULT_REVALIDATE = 60;
+// Build-time only - no runtime revalidation
+const DEFAULT_REVALIDATE = false;
 
 interface ArenaLinks {
   [key: string]: string | undefined;
@@ -95,12 +96,12 @@ export interface ArenaChannel {
 }
 
 type FetchOptions = {
-  revalidate?: number;
+  revalidate?: number | false;
 };
 
 type NextInit = RequestInit & {
   next?: {
-    revalidate?: number;
+    revalidate?: number | false;
     tags?: string[];
   };
 };

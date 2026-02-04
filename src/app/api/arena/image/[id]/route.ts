@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { getBlock, isImageBlock } from "@/lib/arena";
 import { generateBlurData } from "@/lib/blur";
 
-const IMAGE_MAX_AGE = 60;
-const IMAGE_STALE_WHILE_REVALIDATE = 60 * 60 * 24;
+const IMAGE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const IMAGE_STALE_WHILE_REVALIDATE = 60 * 60 * 24 * 365; // 1 year
 
 type Params = {
   id: string;

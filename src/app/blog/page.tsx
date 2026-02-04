@@ -182,7 +182,8 @@ export const metadata: Metadata = {
   title: "Blog",
 };
 
-export const revalidate = 300;
+// Build-time only - redeploy to update
+export const revalidate = false;
 
 export default async function BlogPage() {
   const entries = await getBlogEntries();

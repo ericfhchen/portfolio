@@ -19,9 +19,11 @@ import {
 } from "./arena";
 import { fetchBlurData } from "./blur";
 
-const BIO_REVALIDATE_SECONDS = 300;
-const WORK_REVALIDATE_SECONDS = 300;
-const BLOG_REVALIDATE_SECONDS = 300;
+// Build-time only - no runtime revalidation
+// Redeploy to update content
+const BIO_REVALIDATE_SECONDS = false;
+const WORK_REVALIDATE_SECONDS = false;
+const BLOG_REVALIDATE_SECONDS = false;
 
 function getEnv(key: "ARENA_BIO_CHANNEL" | "ARENA_WORK_CHANNEL" | "ARENA_BLOG_CHANNEL"): string {
   const value = process.env[key];

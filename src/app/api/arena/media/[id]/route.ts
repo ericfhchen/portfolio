@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 import { getBlock, isAttachmentBlock, isMediaBlock } from "@/lib/arena";
 
-const MEDIA_MAX_AGE = 60;
-const MEDIA_STALE_WHILE_REVALIDATE = 60 * 60 * 24;
+const MEDIA_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const MEDIA_STALE_WHILE_REVALIDATE = 60 * 60 * 24 * 365; // 1 year
 
 type Params = {
   id: string;
