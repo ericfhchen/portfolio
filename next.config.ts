@@ -9,9 +9,10 @@ const nextConfig: NextConfig = {
     dangerouslyAllowSVG: true,
     contentSecurityPolicy:
       "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; script-src 'none';",
-    localPatterns: [
+    remotePatterns: [
       {
-        pathname: "/api/arena/image/**",
+        protocol: "https",
+        hostname: "d2w9rnfcy7mm78.cloudfront.net",
       },
     ],
   },

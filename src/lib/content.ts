@@ -194,6 +194,7 @@ type SlideImageVariant = {
   height: number;
   contentType?: string;
   isSvg?: boolean;
+  variant?: "original" | "large" | "display" | "thumb";
 };
 
 type SlidePlaceholder = {
@@ -243,7 +244,6 @@ export async function getWorkSlides(): Promise<WorkSlide[]> {
       .filter((block) => isImageBlock(block) || isMediaBlock(block) || isAttachmentBlock(block))
       .map(async (block) => {
         if (isImageBlock(block)) {
-          const src = `/api/arena/image/${block.id}`;
           const originalWidth = block.image.original.width ?? 1600;
           const originalHeight = block.image.original.height ?? 900;
           const variantFrom = (
@@ -260,10 +260,10 @@ export async function getWorkSlides(): Promise<WorkSlide[]> {
                     ? block.image.display
                     : block.image.thumb;
             if (!target?.url) return undefined;
-            
+
             // More thorough SVG detection
             const urlLower = target.url.toLowerCase();
-            const isSvg = 
+            const isSvg =
               target.content_type === "image/svg+xml" ||
               target.content_type?.startsWith("image/svg") ||
               urlLower.endsWith('.svg') ||
@@ -272,13 +272,14 @@ export async function getWorkSlides(): Promise<WorkSlide[]> {
               urlLower.includes('/svg') ||
               urlLower.includes('format=svg') ||
               urlLower.includes('type=svg');
-            
+
             return {
-              src: `${src}?variant=${variant}`,
+              src: target.url,
               width: target.width ?? fallbackWidth,
               height: target.height ?? fallbackHeight,
               contentType: target.content_type,
               isSvg,
+              variant,
             };
           };
 
@@ -308,11 +309,11 @@ export async function getWorkSlides(): Promise<WorkSlide[]> {
 
           // Build variants (now async)
           const originalVariant: SlideImageVariant = {
-            src: `${src}?variant=original`,
+            src: block.image.original.url,
             width: originalWidth,
             height: originalHeight,
             contentType: block.image.original.content_type,
-            isSvg: 
+            isSvg:
               block.image.original.content_type === "image/svg+xml" ||
               block.image.original.content_type?.startsWith("image/svg") ||
               block.image.original.url.toLowerCase().endsWith('.svg') ||
@@ -321,13 +322,14 @@ export async function getWorkSlides(): Promise<WorkSlide[]> {
               block.image.original.url.toLowerCase().includes('/svg') ||
               block.image.original.url.toLowerCase().includes('format=svg') ||
               block.image.original.url.toLowerCase().includes('type=svg'),
+            variant: "original",
           };
-          
+
           return {
             kind: "image" as const,
             id: block.id,
             alt: imageAltText(block),
-            src: `${src}?variant=original`,
+            src: block.image.original.url,
             width: originalWidth,
             height: originalHeight,
             variants: {
@@ -343,7 +345,7 @@ export async function getWorkSlides(): Promise<WorkSlide[]> {
         }
 
         const embedHtml = isMediaBlock(block) ? block.embed?.html ?? undefined : undefined;
-        const attachmentUrl = block.attachment?.url ? `/api/arena/media/${block.id}` : undefined;
+        const attachmentUrl = block.attachment?.url ?? undefined;
         const attachmentContentType = block.attachment?.content_type ?? undefined;
 
         return {
@@ -467,7 +469,7 @@ export async function getBlogEntries(): Promise<BlogEntry[]> {
         const originalHeight = block.image.original.height ?? 900;
 
         const image: BlogImageResource = {
-          src: `/api/arena/image/${block.id}?variant=${variantKey}`,
+          src: chosenVariant?.url ?? block.image.original.url,
           width: chosenVariant?.width ?? originalWidth,
           height: chosenVariant?.height ?? originalHeight,
         };
@@ -553,7 +555,7 @@ export async function getBlogEntries(): Promise<BlogEntry[]> {
       if (isMediaBlock(block) || isAttachmentBlock(block)) {
         const base = createBlogBaseEntry(block);
         const embedHtml = isMediaBlock(block) ? (typeof block.embed?.html === "string" ? block.embed.html : undefined) : undefined;
-        const attachmentUrl = block.attachment?.url ? `/api/arena/media/${block.id}` : undefined;
+        const attachmentUrl = block.attachment?.url ?? undefined;
         const attachmentContentType = typeof block.attachment?.content_type === "string" ? block.attachment.content_type : undefined;
         const captionHtml = blockHtml(block);
 

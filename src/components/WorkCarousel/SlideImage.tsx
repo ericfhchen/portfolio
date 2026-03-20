@@ -198,15 +198,15 @@ export function SlideImage({ slide, index, activeIndex, loaded, onLoaded }: Slid
         // Compare by src, not by reference
         if (bestVariant.src !== currentVariant.src) {
           // Establish priority: original > large > display
-          const getVariantPriority = (src: string): number => {
-            if (src.includes('variant=original')) return 3;
-            if (src.includes('variant=large')) return 2;
-            if (src.includes('variant=display')) return 1;
+          const getVariantPriority = (v: typeof currentVariant): number => {
+            if (v.variant === 'original') return 3;
+            if (v.variant === 'large') return 2;
+            if (v.variant === 'display') return 1;
             return 0;
           };
-          
-          const currentPriority = getVariantPriority(currentVariant.src);
-          const bestPriority = getVariantPriority(bestVariant.src);
+
+          const currentPriority = getVariantPriority(currentVariant);
+          const bestPriority = getVariantPriority(bestVariant);
           
           // Only switch if the new variant is higher priority (higher resolution)
           if (bestPriority > currentPriority) {
