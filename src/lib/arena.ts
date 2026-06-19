@@ -390,8 +390,11 @@ export async function getChannel(slug: string, options: FetchOptions = {}): Prom
   const maxPages = Math.max(1, Math.ceil((channel.counts?.contents ?? PER_PAGE) / PER_PAGE) + 1);
 
   while (page <= maxPages) {
+    // sort=position_asc matches the curated channel order that v2 returned by
+    // default; v3's default ordering is different (newest-first), which showed
+    // up as work images appearing reversed.
     const res = await arenaFetch<V3ContentsResponse>(
-      `/channels/${slug}/contents?per=${PER_PAGE}&page=${page}`,
+      `/channels/${slug}/contents?per=${PER_PAGE}&page=${page}&sort=position_asc`,
       { next },
     );
     blocks.push(...res.data.map(normalizeBlock));
