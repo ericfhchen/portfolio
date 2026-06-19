@@ -11,8 +11,19 @@ const nextConfig: NextConfig = {
       "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; script-src 'none';",
     remotePatterns: [
       {
+        // Original full-resolution uploads
         protocol: "https",
         hostname: "d2w9rnfcy7mm78.cloudfront.net",
+      },
+      {
+        // Are.na v3 resized image variants (small/medium/large/square)
+        protocol: "https",
+        hostname: "images.are.na",
+      },
+      {
+        // Are.na file attachments (video, etc.)
+        protocol: "https",
+        hostname: "attachments.are.na",
       },
     ],
   },

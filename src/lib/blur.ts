@@ -1,9 +1,14 @@
 import "server-only";
 
+import { decode } from "blurhash";
 import sharp from "sharp";
 
 const PLACEHOLDER_WIDTH = 16;
 const PLACEHOLDER_QUALITY = 50;
+
+// Blurhash is decoded to a tiny raster before being upscaled by the browser,
+// so a small grid is plenty and keeps the data URL small.
+const BLURHASH_DECODE_WIDTH = 32;
 
 type BlurResult = {
   dataUrl: string;
@@ -39,5 +44,34 @@ export async function fetchBlurData(url: string): Promise<BlurResult> {
   }
   const buffer = await response.arrayBuffer();
   return generateBlurData(buffer);
+}
+
+/**
+ * Build a blur placeholder from an Are.na v3 `blurhash` string — no network
+ * fetch required. The returned `width`/`height` carry the original image's
+ * dimensions so callers can preserve aspect ratio.
+ */
+export async function blurDataFromHash(
+  hash: string,
+  originalWidth: number,
+  originalHeight: number,
+): Promise<BlurResult> {
+  const ratio = originalWidth > 0 ? originalHeight / originalWidth : 1;
+  const decodeHeight = Math.max(1, Math.round(BLURHASH_DECODE_WIDTH * ratio));
+
+  // decode() returns RGBA pixels (Uint8ClampedArray, length w*h*4).
+  const pixels = decode(hash, BLURHASH_DECODE_WIDTH, decodeHeight);
+
+  const webp = await sharp(Buffer.from(pixels), {
+    raw: { width: BLURHASH_DECODE_WIDTH, height: decodeHeight, channels: 4 },
+  })
+    .webp({ quality: PLACEHOLDER_QUALITY })
+    .toBuffer();
+
+  return {
+    dataUrl: `data:image/webp;base64,${webp.toString("base64")}`,
+    width: originalWidth,
+    height: originalHeight,
+  };
 }
 

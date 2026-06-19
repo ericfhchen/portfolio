@@ -17,7 +17,7 @@ import {
   isMediaBlock,
   isTextBlock,
 } from "./arena";
-import { fetchBlurData } from "./blur";
+import { blurDataFromHash } from "./blur";
 
 // Build-time only - no runtime revalidation
 // Redeploy to update content
@@ -284,18 +284,12 @@ export async function getWorkSlides(): Promise<WorkSlide[]> {
           };
 
           let placeholder: SlidePlaceholder | undefined;
-          // Prefer smaller variants for blur placeholder to reduce fetch time
-          const placeholderSource =
-            block.image.thumb?.url ??
-            block.image.display?.url ??
-            block.image.large?.url ??
-            block.image.original.url;
-
-          if (placeholderSource) {
+          // v3 ships a blurhash per image, so we build the placeholder from it
+          // instead of downloading the image at build time.
+          const blurhash = block.image.blurhash;
+          if (blurhash) {
             try {
-              const blur = await fetchBlurData(placeholderSource);
-              // Use original image dimensions for placeholder to ensure aspect ratio matches
-              // regardless of which variant was used to generate the blur
+              const blur = await blurDataFromHash(blurhash, originalWidth, originalHeight);
               placeholder = {
                 src: blur.dataUrl,
                 width: originalWidth,
@@ -475,15 +469,10 @@ export async function getBlogEntries(): Promise<BlogEntry[]> {
         };
 
         let placeholder: BlogPlaceholder | undefined;
-        const placeholderSource =
-          block.image.thumb?.url ??
-          block.image.display?.url ??
-          block.image.large?.url ??
-          block.image.original.url;
-
-        if (placeholderSource) {
+        const blurhash = block.image.blurhash;
+        if (blurhash) {
           try {
-            const blur = await fetchBlurData(placeholderSource);
+            const blur = await blurDataFromHash(blurhash, originalWidth, originalHeight);
             placeholder = {
               src: blur.dataUrl,
               width: blur.width,
